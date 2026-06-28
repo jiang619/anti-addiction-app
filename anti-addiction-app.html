@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>专注时光</title>
+<!-- Three.js + GLTFLoader -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  :root {
+    --pink-light: #fde2e9;
+    --sunset: #f5c7a6;
+    --pink-mid: #f0b8c4;
+    --xhs-red: #ff2442;
+    --douyin-black: #1a1a1a;
+    --wechat-green: #07c160;
+    --text-dark: #4a3f3f;
+    --text-light: #7a6e6e;
+    --white: #fffafb;
+    --shadow: 0 4px 20px rgba(180, 130, 130, 0.25);
+    --shadow-sm: 0 2px 8px rgba(180, 130, 130, 0.15);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+
+  /* ============ 背景容器 ============ */
+  .app-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(170deg, #fde2e9 0%, #f5d5c8 30%, #f5c7a6 60%, #f7d4b3 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* ============ 樱花画布 ============ */
+  #sakura-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ============ 主页面内容 ============ */
+  .main-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+  }
+
+  /* ============ 标题 ============ */
+  .main-title {
+    font-size: 1.9rem;
+    font-weight: 500;
+    color: #c49b8a;
+    letter-spacing: 0.15em;
+    opacity: 0.55;
+    text-align: center;
+    position: absolute;
+    top: 8%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 3;
+    /* 渐变效果 */
+    background: linear-gradient(180deg, rgba(196, 155, 138, 0.9) 0%, rgba(196, 155, 138, 0.35) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+  }
+
+  /* ============ 3D模型画布容器 ============ */
+  .model-container {
+    width: 200px;
+    height: 280px;
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 24px;
+    background: transparent;
+  }
+  .model-container canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  /* 模型加载提示 */
+  .model-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(180, 130, 130, 0.35);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ============ 主页面内嵌按钮组（虚化融入背景） ============ */
+  .home-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 88%;
+    max-width: 320px;
+    z-index: 2;
+  }
+
+  .btn-home {
+    width: 100%;
+    padding: 14px 0;
+    border-radius: 16px;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    /* 虚化核心：背景透明融入、仅留轮廓 */
+    background: transparent;
+    border: 1.5px solid rgba(200, 165, 155, 0.3);
+    color: rgba(160, 120, 110, 0.45);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    box-shadow: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 按钮内部微弱光晕 */
+  .btn-home::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(245, 200, 185, 0.12) 0%, transparent 70%);
+    opacity: 0.6;
+    transition: opacity 0.3s;
+  }
+
+  .btn-home:hover {
+    border-color: rgba(200, 165, 155, 0.55);
+    color: rgba(160, 120, 110, 0.65);
+    background: rgba(245, 210, 195, 0.1);
+  }
+
+  .btn-home:active {
+    transform: scale(0.96);
+    border-color: rgba(200, 165, 155, 0.65);
+    color: rgba(160, 120, 110, 0.75);
+    background: rgba(245, 210, 195, 0.18);
+  }
+
+  .btn-home::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: radial-gradient(ellipse at 50% 120%, rgba(245, 200, 185, 0.08) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  /* ============ 遮罩层 ============ */
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.25s ease;
+  }
+
+  .overlay.hidden {
+    display: none;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* ============ 弹窗通用（左右布局：左侧模型 + 右侧内容） ============ */
+  .modal {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 16px 20px 16px 12px;
+    width: 92%;
+    max-width: 440px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* 弹窗左侧3D模型区域 */
+  .modal-model-area {
+    width: 110px;
+    height: 160px;
+    border-radius: 16px;
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    background: transparent;
+  }
+  .modal-model-area canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* 弹窗右侧内容区 */
+  .modal-right {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .modal-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 14px;
+    letter-spacing: 0.03em;
+  }
+
+  .modal-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    margin-bottom: 16px;
+  }
+
+  /* 弹窗内容垂直排列 */
+  .modal-content-v {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ============ 启动页两个大按钮 ============ */
+  .start-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .btn-start {
+    width: 100%;
+    padding: 16px 0;
+    border: none;
+    border-radius: 16px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn-start:active {
+    transform: scale(0.96);
+    opacity: 0.85;
+  }
+
+  .btn-work {
+    background: linear-gradient(135deg, #f5b8c5, #e8a0b4);
+    color: #fff;
+  }
+
+  .btn-relax {
+    background: linear-gradient(135deg, #f5d5c8, #e8c4b0);
+    color: #fff;
+  }
+
+  /* ============ 平台选择按钮 ============ */
+  .platform-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn-platform {
+    width: 100%;
+    padding: 14px 0;
+    border: none;
+    border-radius: 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    color: #fff;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn-platform:active {
+    transform: scale(0.96);
+    opacity: 0.85;
+  }
+
+  .btn-xhs {
+    background: var(--xhs-red);
+  }
+
+  .btn-douyin {
+    background: var(--douyin-black);
+  }
+
+  .btn-wechat {
+    background: var(--wechat-green);
+  }
+
+  /* ============ 输入框弹窗 ============ */
+  .search-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid #e8d5d0;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 16px;
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  .search-input:focus {
+    border-color: #e8b4b8;
+  }
+
+  .search-input::placeholder {
+    color: #cbb8b0;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn-row .btn {
+    flex: 1;
+    padding: 12px 0;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: all 0.2s ease;
+  }
+
+  .btn-row .btn:active {
+    transform: scale(0.96);
+    opacity: 0.85;
+  }
+
+  .btn-confirm {
+    background: linear-gradient(135deg, #f5b8c5, #e8a0b4);
+    color: #fff;
+  }
+
+  .btn-cancel {
+    background: #f0e8e5;
+    color: var(--text-light);
+  }
+
+  /* ============ 放松时长按钮 ============ */
+  .time-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-time {
+    width: 100%;
+    padding: 14px 0;
+    border: 1.5px solid #e8d5d0;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--text-dark);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: all 0.2s ease;
+  }
+
+  .btn-time:active {
+    background: #f5d5c8;
+    border-color: #e8b4b8;
+    transform: scale(0.97);
+  }
+
+  /* ============ 右上角倒计时气泡 ============ */
+  .timer-bubble {
+    position: fixed;
+    top: 60px;
+    right: 12px;
+    z-index: 200;
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 10px 16px;
+    box-shadow: 0 2px 16px rgba(180, 130, 130, 0.18);
+    cursor: pointer;
+    min-width: 72px;
+    text-align: center;
+    transition: all 0.3s ease;
+    animation: bubbleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid rgba(255, 220, 210, 0.4);
+  }
+
+  .timer-bubble.hidden {
+    display: none;
+  }
+
+  @keyframes bubbleIn {
+    from { opacity: 0; transform: translateX(30px) scale(0.8); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+  }
+
+  .timer-bubble .time-text {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #c49b8a;
+    letter-spacing: 0.04em;
+  }
+
+  .timer-bubble .msg-text {
+    font-size: 0.78rem;
+    color: #c49b8a;
+    font-weight: 500;
+    animation: msgFade 2s ease forwards;
+  }
+
+  @keyframes msgFade {
+    0% { opacity: 0; transform: translateY(4px); }
+    20% { opacity: 1; transform: translateY(0); }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ============ 放松结束提示弹窗 ============ */
+  .toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 24px 32px;
+    z-index: 300;
+    box-shadow: 0 8px 32px rgba(180, 130, 130, 0.3);
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: auto;
+  }
+
+  .toast-text {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    letter-spacing: 0.04em;
+    margin-bottom: 16px;
+  }
+
+  .btn-toast-ok {
+    padding: 10px 32px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f5b8c5, #e8a0b4);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: all 0.2s ease;
+  }
+
+  .btn-toast-ok:active {
+    transform: scale(0.94);
+    opacity: 0.85;
+  }
+
+  /* ============ 响应式 ============ */
+  @media (max-width: 380px) {
+    .modal {
+      padding: 12px 14px 12px 8px;
+      gap: 8px;
+      border-radius: 20px;
+      max-width: 96%;
+    }
+    .modal-model-area {
+      width: 85px;
+      height: 130px;
+    }
+    .modal-title {
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+    .btn-start, .btn-platform, .btn-time {
+      padding: 11px 0;
+      font-size: 0.9rem;
+    }
+    .btn-home {
+      font-size: 0.9rem;
+      padding: 12px 0;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .modal {
+      max-width: 480px;
+    }
+    .modal-model-area {
+      width: 130px;
+      height: 180px;
+    }
+    .main-title {
+      font-size: 2.6rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container" id="appContainer">
+  <!-- 樱花画布 -->
+  <canvas id="sakura-canvas"></canvas>
+
+  <!-- 页面标题 -->
+  <div class="main-title">你又在摸鱼诶</div>
+
+  <!-- 主页面内容 -->
+  <div class="main-content">
+    <!-- 3D模型区域 -->
+    <div class="model-container" id="mainModelContainer">
+      <div class="model-loading" id="mainModelLoading">✦ 少女模型加载中 ✦</div>
+    </div>
+
+    <!-- 主页面内嵌按钮（虚化融入背景） -->
+    <div class="home-buttons">
+      <button class="btn-home" id="btnWork">不是摸鱼哦</button>
+      <button class="btn-home" id="btnRelax">放松</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 平台选择弹窗 ============ -->
+<div class="overlay hidden" id="overlayPlatform">
+  <div class="modal">
+    <div class="modal-model-area" id="modalModelPlatform"></div>
+    <div class="modal-right">
+      <div class="modal-title">你想去哪个平台探索？</div>
+      <div class="platform-list">
+        <button class="btn-platform btn-xhs" data-platform="xhs">📕 小红书</button>
+        <button class="btn-platform btn-douyin" data-platform="douyin">🎵 抖音</button>
+        <button class="btn-platform btn-wechat" data-platform="wechat">💬 微信</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 搜索输入弹窗 ============ -->
+<div class="overlay hidden" id="overlaySearch">
+  <div class="modal">
+    <div class="modal-model-area" id="modalModelSearch"></div>
+    <div class="modal-right">
+      <div class="modal-title">你今天想探索什么？</div>
+      <input
+        type="text"
+        class="search-input"
+        id="searchInput"
+        placeholder="输入关键词，直达小红书/抖音"
+        autocomplete="off"
+      >
+      <div class="btn-row">
+        <button class="btn btn-cancel" id="btnSearchCancel">取消</button>
+        <button class="btn btn-confirm" id="btnSearchConfirm">确定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 放松时长选择弹窗 ============ -->
+<div class="overlay hidden" id="overlayRelaxTime">
+  <div class="modal">
+    <div class="modal-model-area" id="modalModelRelax"></div>
+    <div class="modal-right">
+      <div class="modal-title">选择放松时长</div>
+      <div class="time-options">
+        <button class="btn-time" data-minutes="5">🌸 5 分钟</button>
+        <button class="btn-time" data-minutes="15">🌸 15 分钟</button>
+        <button class="btn-time" data-minutes="30">🌸 30 分钟</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 倒计时气泡 ============ -->
+<div class="timer-bubble hidden" id="timerBubble">
+  <div class="time-text" id="timerText">00:00</div>
+  <div class="msg-text hidden" id="timerMsg"></div>
+</div>
+
+<!-- ============ 放松结束提示 ============ -->
+<div class="toast" id="toastEnd">
+  <div class="toast-text">放松时间到，该学习了！</div>
+  <button class="btn-toast-ok" id="btnToastOk">知道了</button>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+(function() {
+  'use strict';
+
+  // ==================== DOM 引用 ====================
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+
+  const overlayPlatform = $('#overlayPlatform');
+  const overlaySearch = $('#overlaySearch');
+  const overlayRelaxTime = $('#overlayRelaxTime');
+  const searchInput = $('#searchInput');
+  const timerBubble = $('#timerBubble');
+  const timerText = $('#timerText');
+  const timerMsg = $('#timerMsg');
+  const toastEnd = $('#toastEnd');
+
+  // 3D 模型容器
+  const mainModelContainer = $('#mainModelContainer');
+  const mainModelLoading = $('#mainModelLoading');
+  const modalModelPlatform = $('#modalModelPlatform');
+  const modalModelSearch = $('#modalModelSearch');
+  const modalModelRelax = $('#modalModelRelax');
+
+  // ==================== 状态 ====================
+  let selectedPlatform = '';
+  let relaxTimer = null;
+  let relaxSeconds = 0;
+  let bubbleClickCount = 0;
+  let bubbleMsgTimeout = null;
+
+  // ==================== 3D 模型管理 ====================
+  const MODEL_PATHS = {
+    idle: '学生女孩3d模型（待机）.glb',     // 待机
+    heart: '学生女孩3d模型（比心）.glb',    // 比心
+    cry: '学生女孩3d模型（呜咽）.glb',     // 呜咽/沮丧
+    wait: '学生女孩3d模型（等待）.glb',     // 等待
+  };
+
+  // 模型缓存
+  const modelCache = {};
+  const loader = new GLTFLoader();
+
+  // 各个场景的 three.js 实例
+  let mainScene = null;    // 主页场景
+  let modalScenes = {};   // 弹窗场景 {platform, search, relax}
+
+  // 当前主页模型
+  let currentMainModelName = 'idle';
+
+  /**
+   * 加载 GLB 模型（带缓存）
+   */
+  async function loadModel(modelName) {
+    if (modelCache[modelName]) return modelCache[modelName];
+    const path = MODEL_PATHS[modelName];
+    if (!path) return null;
+    try {
+      const gltf = await loader.loadAsync(path);
+      modelCache[modelName] = gltf.scene;
+      console.log(`✅ 模型加载完成: ${modelName} (${path})`);
+      return gltf.scene;
+    } catch (err) {
+      console.warn(`⚠️ 模型加载失败: ${modelName} (${path})`, err);
+      return null;
+    }
+  }
+
+  /**
+   * 创建 Three.js 渲染器
+   */
+  function createRenderer(container) {
+    const w = container.clientWidth || 200;
+    const h = container.clientHeight || 280;
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0); // 透明背景
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(renderer.domElement);
+
+    // 场景
+    const scene = new THREE.Scene();
+
+    // 相机
+    const camera = new THREE.PerspectiveCamera(35, w / h, 0.1, 100);
+    camera.position.set(0, 0.5, 3.5);
+    camera.lookAt(0, 0.2, 0);
+
+    // 灯光
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.8);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(2, 3, 3);
+    scene.add(directionalLight);
+
+    const fillLight = new THREE.DirectionalLight(0xffe8e0, 0.6);
+    fillLight.position.set(-1, 1, -1);
+    scene.add(fillLight);
+
+    return { renderer, scene, camera, container };
+  }
+
+  /**
+   * 设置场景中的模型
+   */
+  async function setSceneModel(instance, modelName) {
+    if (!instance) return;
+    const { scene } = instance;
+
+    // 移除旧模型
+    scene.children.forEach(child => {
+      if (child.isGroup || (child.isMesh && child.parent === scene)) {
+        // 保留灯光
+      }
+    });
+    // 只保留非灯光、非模型的物体
+    const lights = scene.children.filter(c => c.isLight || c.isAmbientLight || c.isDirectionalLight);
+
+    // 加载新模型
+    const model = await loadModel(modelName);
+    if (model) {
+      // 克隆模型
+      const cloned = model.clone(true);
+      // 调整模型位置和大小
+      cloned.position.set(0, -0.4, 0);
+      cloned.scale.set(1, 1, 1);
+      scene.add(cloned);
+    }
+
+    return model !== null;
+  }
+
+  /**
+   * 渲染循环
+   */
+  function startRenderLoop(instance) {
+    if (!instance || instance._animId) return;
+    function loop() {
+      instance._animId = requestAnimationFrame(loop);
+      // 轻微旋转模型（可选）
+      // instance.scene.rotation.y += 0.002;
+      instance.renderer.render(instance.scene, instance.camera);
+    }
+    loop();
+  }
+
+  function stopRenderLoop(instance) {
+    if (instance && instance._animId) {
+      cancelAnimationFrame(instance._animId);
+      instance._animId = null;
+    }
+  }
+
+  /**
+   * 调整渲染器大小
+   */
+  function resizeRenderer(instance) {
+    if (!instance) return;
+    const { renderer, camera, container } = instance;
+    const w = container.clientWidth || 200;
+    const h = container.clientHeight || 280;
+    if (w <= 0 || h <= 0) return;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+
+  // ==================== 初始化主页面3D模型 ====================
+  async function initMainModel() {
+    mainScene = createRenderer(mainModelContainer);
+    startRenderLoop(mainScene);
+
+    const ok = await setSceneModel(mainScene, 'idle');
+    if (mainModelLoading && ok) {
+      mainModelLoading.style.display = 'none';
+    }
+    if (!ok && mainModelLoading) {
+      mainModelLoading.textContent = '✦ 模型加载失败 ✦';
+    }
+  }
+
+  /**
+   * 切换主页模型
+   */
+  async function switchMainModel(modelName) {
+    currentMainModelName = modelName;
+    if (mainScene) {
+      await setSceneModel(mainScene, modelName);
+    }
+  }
+
+  // ==================== 弹窗3D模型（等待模型） ====================
+  const modalModelIds = {
+    platform: { container: modalModelPlatform, instance: null },
+    search: { container: modalModelSearch, instance: null },
+    relax: { container: modalModelRelax, instance: null },
+  };
+
+  async function initModalModel(key) {
+    const info = modalModelIds[key];
+    if (!info || !info.container) return;
+    if (info.instance) {
+      // 已初始化，调整大小
+      resizeRenderer(info.instance);
+      return;
+    }
+    info.instance = createRenderer(info.container);
+    startRenderLoop(info.instance);
+    await setSceneModel(info.instance, 'wait');
+  }
+
+  // 懒加载弹窗模型
+  function ensureModalModel(key) {
+    setTimeout(() => initModalModel(key), 100);
+  }
+
+  // ==================== 弹窗辅助函数 ====================
+  function showOverlay(el) {
+    el.classList.remove('hidden');
+    // 初始化对应弹窗的3D模型
+    if (el === overlayPlatform) ensureModalModel('platform');
+    else if (el === overlaySearch) ensureModalModel('search');
+    else if (el === overlayRelaxTime) ensureModalModel('relax');
+  }
+
+  function hideOverlay(el) {
+    el.classList.add('hidden');
+  }
+
+  function hideAllOverlays() {
+    [overlayPlatform, overlaySearch, overlayRelaxTime].forEach(hideOverlay);
+  }
+
+  // ==================== 主页面按钮：不是摸鱼哦 ====================
+  $('#btnWork').addEventListener('click', async () => {
+    // 1. 切换到比心模型
+    await switchMainModel('heart');
+
+    // 2. 停留2秒
+    setTimeout(() => {
+      showOverlay(overlayPlatform);
+    }, 2000);
+  });
+
+  // ==================== 主页面按钮：放松 ====================
+  $('#btnRelax').addEventListener('click', () => {
+    showOverlay(overlayRelaxTime);
+  });
+
+  // ==================== 平台选择 ====================
+  $$('.btn-platform').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedPlatform = btn.dataset.platform;
+      if (selectedPlatform === 'wechat') {
+        // 微信：直接关闭所有弹窗，回到主页 → 恢复待机模型
+        hideAllOverlays();
+        selectedPlatform = '';
+        switchMainModel('idle');
+      } else {
+        // 小红书 / 抖音：弹出搜索输入框
+        hideOverlay(overlayPlatform);
+        showOverlay(overlaySearch);
+        searchInput.value = '';
+        setTimeout(() => searchInput.focus(), 300);
+      }
+    });
+  });
+
+  // ==================== 搜索：取消 ====================
+  $('#btnSearchCancel').addEventListener('click', () => {
+    hideOverlay(overlaySearch);
+    showOverlay(overlayPlatform);
+    selectedPlatform = '';
+    searchInput.value = '';
+  });
+
+  // ==================== 搜索：确定 → 跳转 ====================
+  $('#btnSearchConfirm').addEventListener('click', () => {
+    const keyword = searchInput.value.trim();
+    if (!keyword) {
+      searchInput.focus();
+      searchInput.style.borderColor = '#e88a8a';
+      setTimeout(() => { searchInput.style.borderColor = ''; }, 800);
+      return;
+    }
+
+    let url = '';
+    if (selectedPlatform === 'xhs') {
+      url = `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(keyword)}`;
+    } else if (selectedPlatform === 'douyin') {
+      url = `https://www.douyin.com/search/${encodeURIComponent(keyword)}`;
+    }
+
+    if (url) {
+      window.open(url, '_blank');
+    }
+
+    // 重置并关闭所有弹窗，回到主页面 → 恢复待机模型
+    hideAllOverlays();
+    selectedPlatform = '';
+    searchInput.value = '';
+    switchMainModel('idle');
+  });
+
+  // 搜索输入框回车键确认
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      $('#btnSearchConfirm').click();
+    }
+  });
+
+  // ==================== 放松时长选择 ====================
+  $$('.btn-time').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const minutes = parseInt(btn.dataset.minutes, 10);
+      // 关闭弹窗
+      hideOverlay(overlayRelaxTime);
+      // 切换主页模型为呜咽（沮丧）
+      await switchMainModel('cry');
+      // 短暂延迟后开始计时
+      setTimeout(() => startRelaxTimer(minutes), 200);
+    });
+  });
+
+  // ==================== 倒计时逻辑 ====================
+  function startRelaxTimer(minutes) {
+    // 清除之前的计时器
+    if (relaxTimer) clearInterval(relaxTimer);
+
+    relaxSeconds = minutes * 60;
+    bubbleClickCount = 0;
+
+    // 显示气泡
+    timerBubble.classList.remove('hidden');
+    timerMsg.classList.add('hidden');
+    timerText.textContent = formatTime(relaxSeconds);
+
+    // 开始倒计时
+    relaxTimer = setInterval(() => {
+      relaxSeconds--;
+      timerText.textContent = formatTime(relaxSeconds);
+
+      if (relaxSeconds <= 0) {
+        clearInterval(relaxTimer);
+        relaxTimer = null;
+        timerBubble.classList.add('hidden');
+        showEndToast();
+      }
+    }, 1000);
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  // ==================== 气泡点击交互 ====================
+  timerBubble.addEventListener('click', () => {
+    if (!relaxTimer) return;
+
+    if (bubbleMsgTimeout) clearTimeout(bubbleMsgTimeout);
+
+    bubbleClickCount++;
+
+    if (bubbleClickCount === 1) {
+      timerMsg.textContent = '小主怎么了';
+    } else if (bubbleClickCount === 2) {
+      timerMsg.textContent = 'o(>﹏<)o要离开吗';
+    } else {
+      timerMsg.textContent = 'o(>﹏<)o要离开吗';
+    }
+
+    timerMsg.classList.remove('hidden');
+    timerMsg.style.animation = 'none';
+    void timerMsg.offsetWidth;
+    timerMsg.style.animation = 'msgFade 2s ease forwards';
+
+    bubbleMsgTimeout = setTimeout(() => {
+      timerMsg.classList.add('hidden');
+    }, 2000);
+
+    if (bubbleClickCount >= 3) {
+      clearInterval(relaxTimer);
+      relaxTimer = null;
+      timerBubble.classList.add('hidden');
+      bubbleClickCount = 0;
+      if (bubbleMsgTimeout) clearTimeout(bubbleMsgTimeout);
+      timerMsg.classList.add('hidden');
+      // 恢复待机模型
+      switchMainModel('idle');
+    }
+
+    setTimeout(() => {
+      if (bubbleClickCount < 3) {
+        bubbleClickCount = 0;
+      }
+    }, 3000);
+  });
+
+  // ==================== 放松结束提示 ====================
+  function showEndToast() {
+    toastEnd.classList.add('show');
+    // 恢复待机模型
+    switchMainModel('idle');
+  }
+
+  function hideEndToast() {
+    toastEnd.classList.remove('show');
+  }
+
+  $('#btnToastOk').addEventListener('click', hideEndToast);
+
+  // ==================== 窗口大小变化 - 调整所有渲染器 ====================
+  window.addEventListener('resize', () => {
+    resizeRenderer(mainScene);
+    Object.values(modalModelIds).forEach(info => {
+      if (info.instance) resizeRenderer(info.instance);
+    });
+    resizeCanvas();
+  });
+
+  // ==================== 樱花动效 ====================
+  const canvas = $('#sakura-canvas');
+  const ctx = canvas.getContext('2d');
+
+  let petals = [];
+  let particles = [];
+  let animFrameId = null;
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  resizeCanvas();
+
+  // 樱花花瓣类
+  class Petal {
+    constructor() {
+      this.reset(true);
+    }
+
+    reset(initial) {
+      this.x = Math.random() * canvas.width;
+      this.y = initial ? Math.random() * canvas.height : -60;
+      this.size = 14 + Math.random() * 22;
+      this.speedX = -0.3 + Math.random() * 0.6;
+      this.speedY = 0.3 + Math.random() * 1.0;
+      this.rotation = Math.random() * Math.PI * 2;
+      this.rotSpeed = (Math.random() - 0.5) * 0.03;
+      this.opacity = 0.18 + Math.random() * 0.25;
+      const isWhite = Math.random() < 0.4;
+      if (isWhite) {
+        this.color = `hsla(${0 + Math.random() * 15}, 40%, ${88 + Math.random() * 10}%, ${this.opacity})`;
+      } else {
+        const hueShift = Math.random() * 15;
+        this.color = `hsla(${345 + hueShift}, 65%, ${75 + Math.random() * 14}%, ${this.opacity})`;
+      }
+      this.wobbleAmp = 0.4 + Math.random() * 0.8;
+      this.wobbleSpeed = 0.01 + Math.random() * 0.02;
+      this.wobbleOffset = Math.random() * Math.PI * 2;
+      this.petalType = Math.floor(Math.random() * 3);
+    }
+
+    update() {
+      this.x += this.speedX + Math.sin(this.y * this.wobbleSpeed + this.wobbleOffset) * this.wobbleAmp;
+      this.y += this.speedY;
+      this.rotation += this.rotSpeed;
+
+      if (this.y > canvas.height + 60 || this.x < -60 || this.x > canvas.width + 60) {
+        this.reset(false);
+        this.y = -60;
+      }
+    }
+
+    draw(ctx) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation);
+      ctx.globalAlpha = this.opacity;
+
+      if (this.petalType === 0) {
+        this.drawPetalShape(ctx, this.size);
+      } else if (this.petalType === 1) {
+        for (let i = 0; i < 5; i++) {
+          ctx.save();
+          ctx.rotate((Math.PI * 2 / 5) * i);
+          this.drawPetalShape(ctx, this.size * 0.55);
+          ctx.restore();
+        }
+        ctx.fillStyle = 'hsla(40, 60%, 85%, 0.3)';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.size * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        const count = 3 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < count; i++) {
+          ctx.save();
+          ctx.rotate((Math.PI * 2 / count) * i + Math.random() * 0.3);
+          this.drawPetalShape(ctx, this.size * 0.6);
+          ctx.restore();
+        }
+      }
+
+      ctx.restore();
+    }
+
+    drawPetalShape(ctx, s) {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      const tipY = -s;
+      const midY = -s * 0.2;
+      const baseY = s * 0.15;
+      const width = s * 0.45;
+
+      ctx.moveTo(0, tipY);
+      ctx.bezierCurveTo(width, midY, width, baseY, 0, baseY);
+      ctx.bezierCurveTo(-width, baseY, -width, midY, 0, tipY);
+
+      ctx.moveTo(0, tipY);
+      ctx.lineTo(-width * 0.2, tipY + s * 0.15);
+      ctx.moveTo(0, tipY);
+      ctx.lineTo(width * 0.2, tipY + s * 0.15);
+
+      ctx.fill();
+    }
+  }
+
+  // 光离子粒子类
+  class GlowParticle {
+    constructor(x, y, petalRef) {
+      this.petalRef = petalRef;
+      this.offsetX = (Math.random() - 0.5) * 30;
+      this.offsetY = (Math.random() - 0.5) * 30;
+      this.size = 1.5 + Math.random() * 3;
+      this.opacity = 0.1 + Math.random() * 0.35;
+      this.twinkleSpeed = 0.02 + Math.random() * 0.05;
+      this.twinkleOffset = Math.random() * Math.PI * 2;
+      this.life = 0;
+      this.maxLife = 80 + Math.random() * 120;
+      this.hue = 30 + Math.random() * 20;
+    }
+
+    update() {
+      this.life++;
+      this.offsetX += (Math.random() - 0.5) * 0.5;
+      this.offsetY += (Math.random() - 0.5) * 0.5;
+      this.offsetX = Math.max(-35, Math.min(35, this.offsetX));
+      this.offsetY = Math.max(-35, Math.min(35, this.offsetY));
+
+      if (this.life > this.maxLife) {
+        this.life = 0;
+        this.offsetX = (Math.random() - 0.5) * 30;
+        this.offsetY = (Math.random() - 0.5) * 30;
+      }
+    }
+
+    getX() { return this.petalRef ? this.petalRef.x + this.offsetX : this.offsetX; }
+    getY() { return this.petalRef ? this.petalRef.y + this.offsetY : this.offsetY; }
+
+    draw(ctx) {
+      const alpha = this.opacity * (0.5 + 0.5 * Math.sin(this.life * this.twinkleSpeed + this.twinkleOffset));
+      const x = this.getX();
+      const y = this.getY();
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, this.size * 3);
+      gradient.addColorStop(0, `hsla(${this.hue}, 80%, 85%, 0.8)`);
+      gradient.addColorStop(0.4, `hsla(${this.hue}, 70%, 80%, 0.3)`);
+      gradient.addColorStop(1, `hsla(${this.hue}, 60%, 80%, 0)`);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(x, y, this.size * 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = `hsla(${this.hue}, 80%, 90%, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x, y, this.size * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }
+
+  const PETAL_COUNT = 35;
+  const PARTICLE_PER_PETAL = 3;
+
+  function initSakura() {
+    petals = [];
+    particles = [];
+    for (let i = 0; i < PETAL_COUNT; i++) {
+      const petal = new Petal();
+      petals.push(petal);
+      for (let j = 0; j < PARTICLE_PER_PETAL; j++) {
+        particles.push(new GlowParticle(petal.x, petal.y, petal));
+      }
+    }
+  }
+
+  initSakura();
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    petals.forEach(p => { p.update(); p.draw(ctx); });
+    particles.forEach(p => { p.update(); p.draw(ctx); });
+    animFrameId = requestAnimationFrame(animate);
+  }
+
+  animate();
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+    } else {
+      if (!animFrameId) animate();
+      resizeCanvas();
+    }
+  });
+
+  // ==================== 启动 ====================
+  initMainModel();
+
+  console.log('🌸 防沉迷App已就绪 - 专注时光 (3D模型版)');
+})();
+</script>
+</body>
+</html>
